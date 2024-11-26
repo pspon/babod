@@ -5,6 +5,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import toml
 import json
+import pytz
 
 # Function to authenticate with Google Sheets API
 def authenticate_google_sheets():
@@ -68,14 +69,17 @@ def display_workout_template():
         completed = st.checkbox(f"{exercise_name} - {sets} sets of {reps} reps ({weight})", 
                                 key=exercise_name,
                                 value=st.session_state.get(completed_key, False))  # Restore state of checkbox from session_state
+        # Get the Eastern Time timezone
+        eastern = pytz.timezone('US/Eastern')
 
         # If the checkbox is checked, save the timestamp in session state
         if completed:
             timestamp_key = f"timestamp_{exercise_name}"
             # Save the timestamp only if it's checked
             if timestamp_key not in st.session_state:
-                st.session_state[timestamp_key] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
+                
+                st.session_state[timestamp_key] = datetime.now(eastern).strftime('%Y-%m-%d %H:%M:%S')
+            
             completed_workouts.append({
                 'exercise': exercise_name,
                 'sets': sets,
