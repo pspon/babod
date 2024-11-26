@@ -6,7 +6,8 @@ from datetime import datetime
 # Function to authenticate with Google Sheets API
 def authenticate_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name('babod.json', scope)
+    #creds = ServiceAccountCredentials.from_json_keyfile_name('babod.json', scope)
+    creds = st.secrets["barabod"]["gsheet_cred"]
     client = gspread.authorize(creds)
     return client
 
