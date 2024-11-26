@@ -2,12 +2,15 @@ import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
+import toml
+import json
 
 # Function to authenticate with Google Sheets API
 def authenticate_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     #creds = ServiceAccountCredentials.from_json_keyfile_name('babod.json', scope)
-    creds = st.secrets["barabod"]["gsheet_cred"]
+    toml_string = toml.loads(st.secrets["barabod"]["gsheet_cred"])
+    creds = json.dumps(toml_string, indent=4)
     client = gspread.authorize(creds)
     return client
 
