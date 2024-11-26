@@ -13,7 +13,7 @@ def authenticate_google_sheets():
     credential_json_string = st.secrets["barabod"]
     #st.write(credential_json_string)
     # Create a file-like object from the JSON string
-    json_file = io.StringIO(credential_json_string)
+    json_file = json.loads(credential_json_string)
     creds = ServiceAccountCredentials.from_json_keyfile_dict(json_file, scopes=scopes)
     #st.write(secret)
     #st.write(type(secret))
