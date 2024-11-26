@@ -10,11 +10,11 @@ def authenticate_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     #creds = ServiceAccountCredentials.from_json_keyfile_name('babod.json', scope)
     secret = st.secrets["barabod"]
-    st.write(secret)
-    st.write(type(secret))
-    toml_string = toml.loads(st.secrets["barabod"])
-    creds = json.dumps(toml_string, indent=4)
-    client = gspread.authorize(creds)
+    #st.write(secret)
+    #st.write(type(secret))
+    #toml_string = toml.loads(st.secrets["barabod"])
+    #creds = json.dumps(toml_string, indent=4)
+    client = gspread.authorize(secret)
     return client
 
 # Function to get workout data from the selected template (Day 1, Day 2, or Day 3)
