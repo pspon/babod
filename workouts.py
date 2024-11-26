@@ -11,6 +11,7 @@ def authenticate_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     #creds = ServiceAccountCredentials.from_json_keyfile_name('babod.json', scope)
     credential_json_string = st.secrets["barabod"]
+    st.write(credential_json_string)
     # Create a file-like object from the JSON string
     json_file = io.StringIO(credential_json_string)
     creds = ServiceAccountCredentials.from_json_keyfile_name(json_file, scope)
