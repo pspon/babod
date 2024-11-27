@@ -26,23 +26,13 @@ def get_workout_template(template_name):
     data = worksheet.get_all_records()  # Returns a list of dictionaries
     return data
 
-# Function to display and interact with the workout template
-def display_workout_template():
-    # User selects which template to use for the workout session
-    template_choice = st.selectbox("Select Workout Template", ["Day 1", "Day 2", "Day 3"], key="template_choice")
-
-    # Clear the cache if template is switched
-    if template_choice != st.session_state.get("last_template", None):
-        st.session_state.clear()  # Clears the session state (including checkbox and timestamp data)
-
-    # Update the last selected template in session state
-    st.session_state["last_template"] = template_choice
-
-    # Fetch the selected workout template data
-    workout_data = get_workout_template(template_choice)
+# Function to display the selected workout template in a tab
+def display_workout_template(tab_name):
+    # Fetch the workout template data
+    workout_data = get_workout_template(tab_name)
 
     # Display the workout template with checkboxes for user interaction
-    st.write(f"### {template_choice} Workout Template")
+    st.write(f"### {tab_name} Workout Template")
 
     # Track completed workouts
     completed_workouts = []
@@ -55,8 +45,8 @@ def display_workout_template():
         description = workout['Description']
 
         # Unique keys for checkboxes and timestamps
-        completed_key = f"completed_{exercise_name}"
-        timestamp_key = f"timestamp_{exercise_name}"
+        completed_key = f"completed_{tab_name}_{exercise_name}"
+        timestamp_key = f"timestamp_{tab_name}_{exercise_name}"
 
         # Create a checkbox for the exercise
         completed = st.checkbox(
@@ -114,7 +104,20 @@ def save_workout_session(completed_workouts):
 # Streamlit app entry point
 def main():
     st.title("Workout Tracker")
-    display_workout_template()
+
+    # Tabs for each workout day
+    tabs = ["Day 1", "Day 2", "Day 3"]
+
+    # Remember the last opened tab across reloads
+    if "active_tab" not in st.session_state:
+        st.session_state["active_tab"] = tabs[0]  # Default to "Day 1"
+
+    # Display tabs
+    active_tab = st.radio("Select a Day", tabs, index=tabs.index(st.session_state["active_tab"]))
+    st.session_state["active_tab"] = active_tab  # Update the active tab in session state
+
+    # Display the content of the active tab
+    display_workout_template(active_tab)
 
 if __name__ == "__main__":
     main()
