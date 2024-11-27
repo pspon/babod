@@ -1,3 +1,4 @@
+import io
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -17,36 +18,33 @@ def get_workout_template(template_name):
     sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'  # Replace with your actual Google Sheet ID
     client = authenticate_google_sheets()
     sheet = client.open_by_key(sheet_id)
+
+    # Access the appropriate worksheet based on the user's selection
     worksheet = sheet.worksheet(template_name)
-    return worksheet.get_all_records()  # Returns a list of dictionaries
-
-# Function to save the completed workout session to Google Sheets
-def save_workout_session(workout):
-    sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'  # Replace with your actual Google Sheet ID
-    client = authenticate_google_sheets()
-    sheet = client.open_by_key(sheet_id)
-    session_worksheet = sheet.worksheet('Session Data')  # Name of the sheet where session data will be stored
     
-    # Save the workout to the session sheet, including the timestamp
-    session_worksheet.append_row([
-        workout['timestamp'],  # Save the timestamp when the workout was completed
-        workout['exercise'],
-        workout['sets'],
-        workout['reps'],
-        workout['weight'],
-        workout['completed'],
-        workout['description']
-    ])
+    # Get all records (workout data) from the selected sheet
+    data = worksheet.get_all_records()  # Returns a list of dictionaries
+    return data
 
-# Function to display a specific day's workout template
-def display_day_workout(day_name):
+# Function to display and interact with the workout template
+def display_workout_template():
+    # User selects which template to use for the workout session
+    template_choice = st.selectbox("Select Workout Template", ["Day 1", "Day 2", "Day 3"], key="template_choice")
+
+    # Clear the cache if template is switched
+    if template_choice != st.session_state.get("last_template", None):
+        st.session_state.clear()  # Clears the session state (including checkbox and timestamp data)
+
+    # Update the last selected template in session state
+    st.session_state["last_template"] = template_choice
+
     # Fetch the selected workout template data
-    workout_data = get_workout_template(day_name)
-    st.write(f"### {day_name} Workout Template")
+    workout_data = get_workout_template(template_choice)
 
-    # Get the Eastern Time timezone
-    eastern = pytz.timezone('US/Eastern')
+    # Display the workout template with checkboxes for user interaction
+    st.write(f"### {template_choice} Workout Template")
 
+    completed_workouts = []
     for workout in workout_data:
         exercise_name = workout['Exercise Name']
         sets = workout['Sets']
@@ -54,48 +52,67 @@ def display_day_workout(day_name):
         weight = workout['Weight']
         description = workout['Description']
 
-        completed_key = f"completed_{day_name}_{exercise_name}"
+        # Use session_state to keep track of checkbox and timestamp
+        completed_key = f"completed_{exercise_name}"
 
-        # Create a checkbox for each exercise
+        # Check if the exercise has been marked as completed
         completed = st.checkbox(
             f"{exercise_name} - {sets} sets of {reps} reps ({weight})",
             key=completed_key,
             value=st.session_state.get(completed_key, False)
         )
 
-        if completed and not st.session_state.get(completed_key, False):
-            # Save the workout details to the session sheet
-            workout_details = {
-                'timestamp': datetime.now(eastern).strftime('%Y-%m-%d %H:%M:%S'),
+        # Get the Eastern Time timezone
+        eastern = pytz.timezone('US/Eastern')
+
+        # If the checkbox is checked, save the timestamp in session state
+        if completed:
+            timestamp_key = f"timestamp_{exercise_name}"
+            if timestamp_key not in st.session_state:
+                st.session_state[timestamp_key] = datetime.now(eastern).strftime('%Y-%m-%d %H:%M:%S')
+
+            completed_workouts.append({
                 'exercise': exercise_name,
                 'sets': sets,
                 'reps': reps,
                 'weight': weight,
                 'completed': True,
-                'description': description
-            }
-            save_workout_session(workout_details)
-            st.session_state[completed_key] = True
-            st.experimental_rerun()  # Reload the page to reflect changes
+                'description': description,
+                'timestamp': st.session_state[timestamp_key]
+            })
+        else:
+            timestamp_key = f"timestamp_{exercise_name}"
+            if timestamp_key in st.session_state:
+                del st.session_state[timestamp_key]
+
+    # Button to save the completed workout session
+    if st.button("Save Workout Session"):
+        save_workout_session(completed_workouts)
+        st.success("Workout session saved successfully!")
+
+# Function to save the completed workout session to Google Sheets
+def save_workout_session(completed_workouts):
+    sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'  # Replace with your actual Google Sheet ID
+    client = authenticate_google_sheets()
+    sheet = client.open_by_key(sheet_id)
+    session_worksheet = sheet.worksheet('Session Data')  # Name of the sheet where session data will be stored
+    
+    # Save each completed workout to the session sheet, including the timestamp
+    for workout in completed_workouts:
+        session_worksheet.append_row([
+            workout['timestamp'],  # Save the timestamp when the workout was completed
+            workout['exercise'],
+            workout['sets'],
+            workout['reps'],
+            workout['weight'],
+            workout['completed'],
+            workout['description']
+        ])
 
 # Streamlit app entry point
 def main():
     st.title("Workout Tracker")
-
-    # Set the default active day to "Day 1" if not already set
-    if "active_day" not in st.session_state:
-        st.session_state["active_day"] = "Day 1"
-
-    # Create tabs for the workout templates
-    tabs = st.tabs(["Day 1", "Day 2", "Day 3"])
-    day_names = ["Day 1", "Day 2", "Day 3"]
-
-    # Display the content of the active tab
-    for i, tab in enumerate(tabs):
-        with tab:
-            if st.session_state["active_day"] == day_names[i]:
-                display_day_workout(day_names[i])
-                st.session_state["active_day"] = day_names[i]
+    display_workout_template()
 
 if __name__ == "__main__":
     main()
