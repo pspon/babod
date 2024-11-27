@@ -132,18 +132,12 @@ def main():
     # Create tabs
     tab_objects = st.tabs(tabs)
 
-    # Get the active tab index from the session state
-    active_tab_index = st.session_state["active_tab_index"]
-
     # Display content based on the selected tab
-    with tab_objects[active_tab_index]:
-        display_workout_template(tabs[active_tab_index])
-
-    # Update the active tab index when a tab is selected
     for index, tab_name in enumerate(tabs):
-        if tab_objects[index].selected:
-            st.session_state["active_tab_index"] = index
-            break
+        with tab_objects[index]:
+            if index == st.session_state["active_tab_index"]:
+                st.session_state["active_tab_index"] = index  # Save the active tab index
+            display_workout_template(tab_name)
 
 if __name__ == "__main__":
     main()
