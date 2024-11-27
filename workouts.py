@@ -76,7 +76,10 @@ def display_day_workout(day_name):
             }
             save_workout_session(workout_details)
             st.session_state[completed_key] = True
-            st.experimental_rerun()  # Reload the page to reflect changes
+
+            # Update the last opened expander and reload
+            st.session_state["expanded_day"] = day_name
+            st.experimental_rerun()
 
 # Main function to display all templates in expanders
 def main():
@@ -97,10 +100,9 @@ def main():
         with st.expander(day_name, expanded=expanded):
             display_day_workout(day_name)
 
-            # Update session state when an expander is opened
-            if st.button(f"Set {day_name} as Expanded", key=f"expand_button_{day_name}"):
+            # Automatically update the expanded state when the user interacts with the expander
+            if expanded:
                 st.session_state["expanded_day"] = day_name
-                st.experimental_rerun()  # Reload the page to apply the change
 
 if __name__ == "__main__":
     main()
