@@ -76,33 +76,26 @@ def display_day_workout(day_name):
             }
             save_workout_session(workout_details)
             st.session_state[completed_key] = True
+            st.experimental_rerun()  # Reload the page to reflect changes
 
-            # Update the last opened expander and reload
-            st.session_state["expanded_day"] = day_name
-            st.experimental_rerun()
-
-# Main function to display all templates in expanders
+# Streamlit app entry point
 def main():
     st.title("Workout Tracker")
 
-    # Initialize session state to track which expander is open
-    if "expanded_day" not in st.session_state:
-        st.session_state["expanded_day"] = "Day 1"  # Default to Day 1 being expanded
+    # Set the default active day to "Day 1" if not already set
+    if "active_day" not in st.session_state:
+        st.session_state["active_day"] = "Day 1"
 
-    # List of day templates
-    day_templates = ["Day 1", "Day 2", "Day 3"]
+    # Create tabs for the workout templates
+    tabs = st.tabs(["Day 1", "Day 2", "Day 3"])
+    day_names = ["Day 1", "Day 2", "Day 3"]
 
-    # Display each template inside an expander
-    for day_name in day_templates:
-        expanded = st.session_state["expanded_day"] == day_name
-
-        # Create an expander for the day
-        with st.expander(day_name, expanded=expanded):
-            display_day_workout(day_name)
-
-            # Automatically update the expanded state when the user interacts with the expander
-            if expanded:
-                st.session_state["expanded_day"] = day_name
+    # Display the content of the active tab
+    for i, tab in enumerate(tabs):
+        with tab:
+            if st.session_state["active_day"] == day_names[i]:
+                display_day_workout(day_names[i])
+                st.session_state["active_day"] = day_names[i]
 
 if __name__ == "__main__":
     main()
