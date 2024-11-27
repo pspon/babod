@@ -26,7 +26,7 @@ def get_workout_template(template_name):
     data = worksheet.get_all_records()  # Returns a list of dictionaries
     return data
 
-# Function to display the selected workout template in a tab
+# Function to display the workout template within a tab
 def display_workout_template(tab_name):
     # Fetch the workout template data
     workout_data = get_workout_template(tab_name)
@@ -109,15 +109,18 @@ def main():
     tabs = ["Day 1", "Day 2", "Day 3"]
 
     # Remember the last opened tab across reloads
-    if "active_tab" not in st.session_state:
-        st.session_state["active_tab"] = tabs[0]  # Default to "Day 1"
+    if "active_tab_index" not in st.session_state:
+        st.session_state["active_tab_index"] = 0  # Default to the first tab
 
-    # Display tabs
-    active_tab = st.radio("Select a Day", tabs, index=tabs.index(st.session_state["active_tab"]))
-    st.session_state["active_tab"] = active_tab  # Update the active tab in session state
+    # Create tabs
+    tab_objects = st.tabs(tabs)
 
-    # Display the content of the active tab
-    display_workout_template(active_tab)
+    # Display content based on the selected tab
+    for index, tab_name in enumerate(tabs):
+        with tab_objects[index]:
+            if index == st.session_state["active_tab_index"]:
+                st.session_state["active_tab_index"] = index  # Save the active tab index
+            display_workout_template(tab_name)
 
 if __name__ == "__main__":
     main()
