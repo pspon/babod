@@ -44,7 +44,9 @@ def display_workout_template():
     # Display the workout template with checkboxes for user interaction
     st.write(f"### {template_choice} Workout Template")
 
+    # Track completed workouts
     completed_workouts = []
+
     for workout in workout_data:
         exercise_name = workout['Exercise Name']
         sets = workout['Sets']
@@ -52,25 +54,26 @@ def display_workout_template():
         weight = workout['Weight']
         description = workout['Description']
 
-        # Use session_state to keep track of checkbox and timestamp
+        # Unique keys for checkboxes and timestamps
         completed_key = f"completed_{exercise_name}"
+        timestamp_key = f"timestamp_{exercise_name}"
 
-        # Check if the exercise has been marked as completed
+        # Create a checkbox for the exercise
         completed = st.checkbox(
             f"{exercise_name} - {sets} sets of {reps} reps ({weight})",
             key=completed_key,
             value=st.session_state.get(completed_key, False)
         )
 
-        # Get the Eastern Time timezone
+        # Eastern timezone for timestamps
         eastern = pytz.timezone('US/Eastern')
 
-        # If the checkbox is checked, save the timestamp in session state
+        # If the checkbox is ticked, update session state with the timestamp
         if completed:
-            timestamp_key = f"timestamp_{exercise_name}"
             if timestamp_key not in st.session_state:
                 st.session_state[timestamp_key] = datetime.now(eastern).strftime('%Y-%m-%d %H:%M:%S')
 
+            # Append to completed workouts
             completed_workouts.append({
                 'exercise': exercise_name,
                 'sets': sets,
@@ -81,14 +84,13 @@ def display_workout_template():
                 'timestamp': st.session_state[timestamp_key]
             })
         else:
-            timestamp_key = f"timestamp_{exercise_name}"
+            # If unchecked, remove the timestamp from session state
             if timestamp_key in st.session_state:
                 del st.session_state[timestamp_key]
 
-    # Button to save the completed workout session
-    if st.button("Save Workout Session"):
+    # Automatically save session data to Google Sheets when checkboxes are ticked
+    if completed_workouts:
         save_workout_session(completed_workouts)
-        st.success("Workout session saved successfully!")
 
 # Function to save the completed workout session to Google Sheets
 def save_workout_session(completed_workouts):
