@@ -82,24 +82,41 @@ def display_workout_template(tab_name):
     if completed_workouts:
         save_workout_session(completed_workouts)
 
+# Function to check if the workout has already been saved based on timestamp
+def workout_exists(timestamp):
+    sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'  # Replace with your actual Google Sheet ID
+    client = authenticate_google_sheets()
+    sheet = client.open_by_key(sheet_id)
+    session_worksheet = sheet.worksheet('Session Data')  # Name of the sheet where session data will be stored
+
+    # Get all records from the session data sheet and check if the timestamp already exists
+    records = session_worksheet.get_all_records()
+    for record in records:
+        if record['timestamp'] == timestamp:
+            return True  # The workout has already been saved
+    
+    return False  # The workout is new
+
 # Function to save the completed workout session to Google Sheets
 def save_workout_session(completed_workouts):
     sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'  # Replace with your actual Google Sheet ID
     client = authenticate_google_sheets()
     sheet = client.open_by_key(sheet_id)
     session_worksheet = sheet.worksheet('Session Data')  # Name of the sheet where session data will be stored
-    
-    # Save each completed workout to the session sheet, including the timestamp
+
+    # Save each completed workout to the session sheet, including the timestamp, if it doesn't exist
     for workout in completed_workouts:
-        session_worksheet.append_row([
-            workout['timestamp'],  # Save the timestamp when the workout was completed
-            workout['exercise'],
-            workout['sets'],
-            workout['reps'],
-            workout['weight'],
-            workout['completed'],
-            workout['description']
-        ])
+        # Check if the workout with the same timestamp already exists
+        if not workout_exists(workout['timestamp']):
+            session_worksheet.append_row([
+                workout['timestamp'],  # Save the timestamp when the workout was completed
+                workout['exercise'],
+                workout['sets'],
+                workout['reps'],
+                workout['weight'],
+                workout['completed'],
+                workout['description']
+            ])
 
 # Streamlit app entry point
 def main():
