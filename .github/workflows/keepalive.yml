@@ -14,4 +14,4 @@ jobs:
     steps:
     - name: Send GET request to keep app alive
       run: |
-        curl -X GET "https://your-streamlit-app-url.com"
+        curl -X GET "https://barabod.streamlit.app"
