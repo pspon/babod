@@ -18,7 +18,7 @@ jobs:
     - name: Update date in Streamlit app
       run: |
         current_date=$(date '+%Y-%m-%d')
-        sed -i "s/st.text(\"Today is .*\")/st.text(\"Today is $current_date\")/" app.py
+        sed -i "s/st.text(\"Today is .*\")/st.text(\"Today is $current_date\")/" workouts.py
 
     - name: Commit and push changes
       run: |
