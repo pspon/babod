@@ -138,7 +138,7 @@ def main():
             if index == st.session_state["active_tab_index"]:
                 st.session_state["active_tab_index"] = index  # Save the active tab index
             display_workout_template(tab_name)
-    st.text("Today is 2024-12-02")
+    st.text("Today is 2024-12-03")
 
 if __name__ == "__main__":
     main()
