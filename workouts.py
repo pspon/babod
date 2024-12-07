@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_js_eval import streamlit_js_eval
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
@@ -78,7 +79,7 @@ def display_workout_template(tab_name):
                     'weight': weight,
                     'description': description
                 })
-                st.set_query_params()  # Simulate a page reload
+                streamlit_js_eval(js_expressions="parent.window.location.reload()")
 
 # Streamlit app entry point
 def main():
