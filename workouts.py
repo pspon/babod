@@ -78,7 +78,7 @@ def display_workout_template(tab_name):
                     'weight': weight,
                     'description': description
                 })
-                st.experimental_rerun()  # Refresh the app to update the completed status
+                st.experimental_set_query_params()  # Simulate a page reload
 
 # Streamlit app entry point
 def main():
