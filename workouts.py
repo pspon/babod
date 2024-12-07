@@ -78,7 +78,7 @@ def display_workout_template(tab_name):
                     'weight': weight,
                     'description': description
                 })
-                st.experimental_set_query_params()  # Simulate a page reload
+                st.set_query_params()  # Simulate a page reload
 
 # Streamlit app entry point
 def main():
