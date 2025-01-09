@@ -13,15 +13,15 @@ def authenticate_google_sheets():
     client = gspread.authorize(creds)
     return client
 
-# Function to get workout data from the selected template (Day 1, Day 2, or Day 3)
+# Function to get workout data from the selected template
 def get_workout_template(template_name):
-    sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'  # Replace with your actual Google Sheet ID
+    sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'
     client = authenticate_google_sheets()
     sheet = client.open_by_key(sheet_id)
     worksheet = sheet.worksheet(template_name)
     return worksheet.get_all_records()
 
-# Function to fetch today's completed workouts from the session sheet
+# Function to fetch today's completed workouts
 def get_completed_workouts_today():
     sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'
     client = authenticate_google_sheets()
@@ -32,7 +32,7 @@ def get_completed_workouts_today():
     records = session_worksheet.get_all_records()
     return {record['exercise'] for record in records if record['timestamp'].startswith(today)}
 
-# Function to save a completed workout to the session sheet
+# Function to save a completed workout
 def save_workout_session(workout):
     sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'
     client = authenticate_google_sheets()
@@ -46,54 +46,98 @@ def save_workout_session(workout):
         workout['sets'],
         workout['reps'],
         workout['weight'],
-        True,  # Completed
+        True,
         workout['description']
     ])
 
-# Function to display the workout template with buttons
-def display_workout_template(tab_name):
-    st.write(f"### {tab_name} Workout Template")
-    workout_data = get_workout_template(tab_name)
+# Streamlit app entry point
+def main():
+    st.title("Workout Tracker")
+    
+    # Layout toggle
+    layout_mode = st.radio("Select Layout", ("Mobile", "Desktop"), horizontal=True)
+    
+    # CSS for mobile-friendly tiles
+    if layout_mode == "Mobile":
+        st.markdown(
+            """
+            <style>
+            .workout-tile {
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                padding: 10px;
+                margin-bottom: 10px;
+                text-align: center;
+            }
+            </style>
+            """, unsafe_allow_html=True
+        )
+    
+    # Display all workouts at once
+    workout_days = ["Day 1", "Day 2", "Day 3"]
+    all_workouts = []
     completed_workouts_today = get_completed_workouts_today()
     
-    for workout in workout_data:
+    for day in workout_days:
+        workouts = get_workout_template(day)
+        for workout in workouts:
+            workout['Day'] = day  # Add day info to workout
+            all_workouts.append(workout)
+    
+    # Display workouts
+    for workout in all_workouts:
         exercise_name = workout['Exercise Name']
         sets = workout['Sets']
         reps = workout['Reps']
         weight = workout['Weight']
         description = workout['Description']
+        day = workout['Day']
         
-        button_key = f"{tab_name}_{exercise_name}"
-        if exercise_name in completed_workouts_today:
-            st.button(
-                f"✅ {exercise_name} - {sets} sets of {reps} reps ({weight}) [Completed]",
-                key=button_key,
-                disabled=True
-            )
-        else:
-            if st.button(f"{exercise_name} - {sets} sets of {reps} reps ({weight})", key=button_key):
-                save_workout_session({
-                    'exercise': exercise_name,
-                    'sets': sets,
-                    'reps': reps,
-                    'weight': weight,
-                    'description': description
-                })
-                streamlit_js_eval(js_expressions="parent.window.location.reload()")
-
-# Streamlit app entry point
-def main():
-    st.title("Workout Tracker")
-    tabs = ["Day 1", "Day 2", "Day 3"]
-    if "active_tab_index" not in st.session_state:
-        st.session_state["active_tab_index"] = 0
-
-    tab_objects = st.tabs(tabs)
-    for index, tab_name in enumerate(tabs):
-        with tab_objects[index]:
-            if index == st.session_state["active_tab_index"]:
-                st.session_state["active_tab_index"] = index
-            display_workout_template(tab_name)
+        button_key = f"{day}_{exercise_name}"
+        
+        if layout_mode == "Mobile":
+            with st.container():
+                st.markdown(f"<div class='workout-tile'>", unsafe_allow_html=True)
+                st.write(f"**{exercise_name}**")
+                st.write(f"{sets} sets of {reps} reps ({weight})")
+                st.write(f"*{description}*")
+                st.write(f"Day: {day}")
+                
+                if exercise_name in completed_workouts_today:
+                    st.button(
+                        "✅ Completed", key=button_key, disabled=True
+                    )
+                else:
+                    if st.button("Mark as Complete", key=button_key):
+                        save_workout_session({
+                            'exercise': exercise_name,
+                            'sets': sets,
+                            'reps': reps,
+                            'weight': weight,
+                            'description': description
+                        })
+                        streamlit_js_eval(js_expressions="parent.window.location.reload()")
+                st.markdown("</div>", unsafe_allow_html=True)
+        else:  # Desktop layout
+            col1, col2, col3, col4 = st.columns(4)
+            col1.write(f"**{exercise_name}**")
+            col2.write(f"{sets} sets of {reps} reps ({weight})")
+            col3.write(f"*{description}*")
+            col4.write(f"Day: {day}")
+            
+            if exercise_name in completed_workouts_today:
+                col4.button("✅ Completed", key=button_key, disabled=True)
+            else:
+                if col4.button("Mark as Complete", key=button_key):
+                    save_workout_session({
+                        'exercise': exercise_name,
+                        'sets': sets,
+                        'reps': reps,
+                        'weight': weight,
+                        'description': description
+                    })
+                    streamlit_js_eval(js_expressions="parent.window.location.reload()")
+    
     st.text("Today is 2025-01-09")
 
 if __name__ == "__main__":
