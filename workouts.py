@@ -54,8 +54,9 @@ def save_workout_session(workout):
 def main():
     st.title("Workout Tracker")
     
-    # Layout toggle
-    layout_mode = st.radio("Select Layout", ("Mobile", "Desktop"), horizontal=True)
+    # Detect if the browser is on a mobile or desktop device
+    is_mobile = streamlit_js_eval(js_expressions="window.innerWidth <= 768", key="device_detection")
+    layout_mode = "Mobile" if is_mobile else "Desktop"
     
     # CSS for mobile-friendly tiles
     if layout_mode == "Mobile":
