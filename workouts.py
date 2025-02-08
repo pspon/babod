@@ -77,47 +77,40 @@ def main():
     workout_days = ["Day 1", "Day 2", "Day 3"]
     
     if layout_mode == "Mobile":
-        # Define pastel colors for each day.
-        day_colors = {
-            "Day 1": "#FFB6C1",  # Light Pink
-            "Day 2": "#B0E0E6",  # Powder Blue
-            "Day 3": "#98FB98",  # Pale Green
+        # Define icons to represent each day.
+        day_icons = {
+            "Day 1": "🟢",  # Green light
+            "Day 2": "🟡",  # Yellow light
+            "Day 3": "🔴",  # Red light
         }
         
-        # Flatten all workouts from all days, adding the day info.
+        # Flatten workouts from all days.
         all_workouts = []
         for day in workout_days:
             workouts = get_workout_template(day)
             for workout in workouts:
-                workout['Day'] = day
+                workout['Day'] = day  # Tag each workout with its day.
                 all_workouts.append(workout)
-        
-        # Force 3 columns in mobile view.
+                
+        # Force a 3‑column grid in mobile view.
         num_cols = 3
         
-        # Inject CSS for minimal mobile buttons.
+        # Inject minimal CSS to tightly arrange the buttons.
         st.markdown(
             """
             <style>
-            .workout-btn-container {
-                padding: 2px;
-                margin: 2px;
-            }
             .workout-btn {
                 width: 100% !important;
-                font-size: 0.7em !important;
-                padding: 4px !important;
-                border: none;
+                font-size: 0.75em !important;
+                padding: 4px 2px !important;
+                margin: 1px !important;
                 border-radius: 4px;
-                color: #333;
             }
             </style>
             """, unsafe_allow_html=True
         )
         
-        st.write("Using 3 columns in mobile view.")
-        
-        # Render the grid: loop over workouts in groups of 3.
+        # Render the grid in groups of 3.
         for i in range(0, len(all_workouts), num_cols):
             cols = st.columns(num_cols)
             row_workouts = all_workouts[i:i+num_cols]
@@ -126,23 +119,18 @@ def main():
                     workout = row_workouts[j]
                     exercise_name = workout['Exercise Name']
                     day = workout['Day']
+                    icon = day_icons.get(day, "")
                     button_key = f"{day}_{exercise_name}"
-                    bg_color = day_colors.get(day, "#F0E68C")  # default color if day not found
                     
-                    # Adjust label and disabled status if already completed.
+                    # Add a check mark if the exercise is already complete.
                     if exercise_name in completed_workouts_today:
-                        button_label = "✅ " + exercise_name
+                        button_label = f"✅ {icon} {exercise_name}"
                         disabled = True
                     else:
-                        button_label = exercise_name
+                        button_label = f"{icon} {exercise_name}"
                         disabled = False
                     
                     with cols[j]:
-                        # Wrap each button in a colored container.
-                        st.markdown(
-                            f"<div class='workout-btn-container' style='background-color: {bg_color};'>",
-                            unsafe_allow_html=True,
-                        )
                         if st.button(button_label, key=button_key, disabled=disabled, help=day):
                             save_workout_session({
                                 'exercise': exercise_name,
@@ -151,8 +139,8 @@ def main():
                                 'weight': workout['Weight'],
                                 'description': workout['Description']
                             })
+                            # Refresh the app to reflect the new state.
                             streamlit_js_eval(js_expressions="parent.window.location.reload()")
-                        st.markdown("</div>", unsafe_allow_html=True)
                 else:
                     cols[j].empty()
     else:
