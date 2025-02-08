@@ -5,7 +5,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import pytz
 
-# Function to authenticate with Google Sheets API
+# Authenticate with Google Sheets API.
 def authenticate_google_sheets():
     scopes = [
         "https://spreadsheets.google.com/feeds",
@@ -16,7 +16,7 @@ def authenticate_google_sheets():
     client = gspread.authorize(creds)
     return client
 
-# Function to get workout data from the selected template
+# Get workout data from the specified template (day).
 def get_workout_template(template_name):
     sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'
     client = authenticate_google_sheets()
@@ -24,7 +24,7 @@ def get_workout_template(template_name):
     worksheet = sheet.worksheet(template_name)
     return worksheet.get_all_records()
 
-# Function to fetch today's completed workouts
+# Fetch today’s completed workouts.
 def get_completed_workouts_today():
     sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'
     client = authenticate_google_sheets()
@@ -35,7 +35,7 @@ def get_completed_workouts_today():
     records = session_worksheet.get_all_records()
     return {record['exercise'] for record in records if record['timestamp'].startswith(today)}
 
-# Function to save a completed workout
+# Save a completed workout.
 def save_workout_session(workout):
     sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'
     client = authenticate_google_sheets()
@@ -53,98 +53,93 @@ def save_workout_session(workout):
         workout['description']
     ])
 
-# Streamlit app entry point
+# Main Streamlit app.
 def main():
     st.title("Workout Tracker")
     
-    # Detect the viewport width using JavaScript.
-    # For an iPhone SE, this should return something like 375.
+    # Detect the browser window's width.
     width = streamlit_js_eval(js_expressions="window.innerWidth", key="device_width")
     st.write("Detected window width:", width)
-    
-    # Try to convert the detected width to an integer.
     try:
         width_val = int(width)
     except Exception as e:
         width_val = None
     
-    # Determine layout mode based on detected width,
-    # or allow a manual override if detection fails.
-    if width_val is not None:
-        layout_mode = "Mobile" if width_val <= 768 else "Desktop"
+    # Use mobile layout only if width < 350; otherwise, use desktop layout.
+    if width_val is not None and width_val < 350:
+        layout_mode = "Mobile"
     else:
-        layout_mode = "Mobile" if st.sidebar.checkbox("Force Mobile Layout", value=False) else "Desktop"
+        layout_mode = "Desktop"
     
     st.write("Layout mode:", layout_mode)
     
-    # Inject mobile-specific CSS when in Mobile layout.
-    if layout_mode == "Mobile":
-        st.markdown(
-            """
-            <style>
-            /* Card-style tile for each workout */
-            .workout-tile {
-                border: 1px solid #ddd;
-                border-radius: 8px;
-                padding: 15px;
-                margin-bottom: 15px;
-                text-align: center;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                background-color: #f9f9f9;
-            }
-            /* Make buttons full-width and easier to tap */
-            button {
-                width: 100% !important;
-                padding: 10px;
-                font-size: 1.1em;
-            }
-            </style>
-            """, unsafe_allow_html=True
-        )
-    
     completed_workouts_today = get_completed_workouts_today()
     workout_days = ["Day 1", "Day 2", "Day 3"]
-    
+
     if layout_mode == "Mobile":
-        # Mobile: Display workouts as full-width card tiles, grouped by day.
-        for day in workout_days:
-            st.subheader(day)
-            workouts = get_workout_template(day)
-            for workout in workouts:
-                exercise_name = workout['Exercise Name']
-                sets = workout['Sets']
-                reps = workout['Reps']
-                weight = workout['Weight']
-                description = workout['Description']
-                button_key = f"{day}_{exercise_name}"
-                
-                with st.container():
-                    st.markdown("<div class='workout-tile'>", unsafe_allow_html=True)
-                    st.write(f"**{exercise_name}**")
-                    st.write(f"{sets} sets of {reps} reps ({weight})")
-                    st.write(f"*{description}*")
-                    
-                    if exercise_name in completed_workouts_today:
-                        st.button("✅ Completed", key=button_key, disabled=True)
-                    else:
-                        if st.button("Mark as Complete", key=button_key):
-                            save_workout_session({
-                                'exercise': exercise_name,
-                                'sets': sets,
-                                'reps': reps,
-                                'weight': weight,
-                                'description': description
-                            })
-                            # Reload the app to show the updated state.
-                            streamlit_js_eval(js_expressions="parent.window.location.reload()")
-                    st.markdown("</div>", unsafe_allow_html=True)
-    else:
-        # Desktop: Retain original four-column layout.
+        # Mobile Layout: Display a grid of simple exercise buttons.
+        # We'll flatten all workouts from all days.
         all_workouts = []
         for day in workout_days:
             workouts = get_workout_template(day)
             for workout in workouts:
-                workout['Day'] = day  # Attach day information.
+                workout['Day'] = day  # Tag workout with its day.
+                all_workouts.append(workout)
+        
+        # Calculate the number of columns.
+        # For example, with width=320 and a minimum button width ~100px, we can fit about 3 columns.
+        if width_val is not None:
+            num_cols = max(1, width_val // 100)
+        else:
+            num_cols = 3  # Fallback.
+        st.write("Using {} columns".format(num_cols))
+        
+        # Optional CSS to reduce button font size, padding, and margins
+        st.markdown(
+            """
+            <style>
+            button {
+                font-size: 0.8em !important;
+                padding: 4px 8px !important;
+                margin: 2px !important;
+            }
+            </style>
+            """, unsafe_allow_html=True
+        )
+        
+        # Render the workouts as a grid of buttons.
+        for i in range(0, len(all_workouts), num_cols):
+            row_workouts = all_workouts[i: i + num_cols]
+            cols = st.columns(len(row_workouts))
+            for col, workout in zip(cols, row_workouts):
+                exercise_name = workout['Exercise Name']
+                button_key = f"{workout['Day']}_{exercise_name}"
+                
+                # If already completed today, show a check mark.
+                if exercise_name in completed_workouts_today:
+                    button_label = "✅ " + exercise_name
+                    disabled = True
+                else:
+                    button_label = exercise_name
+                    disabled = False
+                
+                if col.button(button_label, key=button_key, disabled=disabled):
+                    # On button click, mark the workout complete.
+                    save_workout_session({
+                        'exercise': exercise_name,
+                        'sets': workout['Sets'],
+                        'reps': workout['Reps'],
+                        'weight': workout['Weight'],
+                        'description': workout['Description']
+                    })
+                    streamlit_js_eval(js_expressions="parent.window.location.reload()")
+    else:
+        # Desktop Layout: Retain the original detailed layout.
+        all_workouts = []
+        for day in workout_days:
+            workouts = get_workout_template(day)
+            for workout in workouts:
+                workout['Day'] = day
                 all_workouts.append(workout)
                 
         for workout in all_workouts:
