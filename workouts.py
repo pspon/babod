@@ -118,16 +118,19 @@ def main():
                 if j < len(row_workouts):
                     workout = row_workouts[j]
                     exercise_name = workout['Exercise Name']
+                    sets = workout['Sets']
+                    reps = workout['Reps']
+                    weight = workout['Weight']
                     day = workout['Day']
                     icon = day_icons.get(day, "")
                     button_key = f"{day}_{exercise_name}"
                     
                     # Add a check mark if the exercise is already complete.
                     if exercise_name in completed_workouts_today:
-                        button_label = f"✅ {icon} {exercise_name}"
+                        button_label = f"✅ {exercise_name} {sets}x{reps} ({weight})"
                         disabled = True
                     else:
-                        button_label = f"{icon} {exercise_name}"
+                        button_label = f"{icon} {exercise_name} {sets}x{reps} ({weight})"
                         disabled = False
                     
                     with cols[j]:
