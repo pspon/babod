@@ -79,9 +79,9 @@ def main():
     if layout_mode == "Mobile":
         # Define icons to represent each day.
         day_icons = {
-            "Day 1": "🟢",  # Green light
-            "Day 2": "🟡",  # Yellow light
-            "Day 3": "🔴",  # Red light
+            "Day 1": "🟢", 
+            "Day 2": "⚪", 
+            "Day 3": "🔵",
         }
         
         # Flatten workouts from all days.
