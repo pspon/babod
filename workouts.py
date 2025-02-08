@@ -64,7 +64,7 @@ def main():
         width_val = int(width)
     except Exception as e:
         width_val = None
-    
+
     # Use mobile layout only if width < 350; otherwise, use desktop layout.
     if width_val is not None and width_val < 350:
         layout_mode = "Mobile"
@@ -75,66 +75,88 @@ def main():
     
     completed_workouts_today = get_completed_workouts_today()
     workout_days = ["Day 1", "Day 2", "Day 3"]
-
+    
     if layout_mode == "Mobile":
-        # Mobile Layout: Display a grid of simple exercise buttons.
-        # We'll flatten all workouts from all days.
+        # Define pastel colors for each day.
+        day_colors = {
+            "Day 1": "#FFB6C1",  # Light Pink
+            "Day 2": "#B0E0E6",  # Powder Blue
+            "Day 3": "#98FB98",  # Pale Green
+        }
+        
+        # Flatten all workouts from all days, adding the day info.
         all_workouts = []
         for day in workout_days:
             workouts = get_workout_template(day)
             for workout in workouts:
-                workout['Day'] = day  # Tag workout with its day.
+                workout['Day'] = day
                 all_workouts.append(workout)
         
-        # Calculate the number of columns.
-        # For example, with width=320 and a minimum button width ~100px, we can fit about 3 columns.
-        if width_val is not None:
-            num_cols = max(1, width_val // 100)
-        else:
-            num_cols = 3  # Fallback.
-        st.write("Using {} columns".format(num_cols))
+        # Force 3 columns in mobile view.
+        num_cols = 3
         
-        # Optional CSS to reduce button font size, padding, and margins
+        # Inject CSS for minimal mobile buttons.
         st.markdown(
             """
             <style>
-            button {
-                font-size: 0.8em !important;
-                padding: 4px 8px !important;
-                margin: 2px !important;
+            .workout-btn-container {
+                padding: 2px;
+                margin: 2px;
+            }
+            .workout-btn {
+                width: 100% !important;
+                font-size: 0.7em !important;
+                padding: 4px !important;
+                border: none;
+                border-radius: 4px;
+                color: #333;
             }
             </style>
             """, unsafe_allow_html=True
         )
         
-        # Render the workouts as a grid of buttons.
+        st.write("Using 3 columns in mobile view.")
+        
+        # Render the grid: loop over workouts in groups of 3.
         for i in range(0, len(all_workouts), num_cols):
-            row_workouts = all_workouts[i: i + num_cols]
-            cols = st.columns(len(row_workouts))
-            for col, workout in zip(cols, row_workouts):
-                exercise_name = workout['Exercise Name']
-                button_key = f"{workout['Day']}_{exercise_name}"
-                
-                # If already completed today, show a check mark.
-                if exercise_name in completed_workouts_today:
-                    button_label = "✅ " + exercise_name
-                    disabled = True
+            cols = st.columns(num_cols)
+            row_workouts = all_workouts[i:i+num_cols]
+            for j in range(num_cols):
+                if j < len(row_workouts):
+                    workout = row_workouts[j]
+                    exercise_name = workout['Exercise Name']
+                    day = workout['Day']
+                    button_key = f"{day}_{exercise_name}"
+                    bg_color = day_colors.get(day, "#F0E68C")  # default color if day not found
+                    
+                    # Adjust label and disabled status if already completed.
+                    if exercise_name in completed_workouts_today:
+                        button_label = "✅ " + exercise_name
+                        disabled = True
+                    else:
+                        button_label = exercise_name
+                        disabled = False
+                    
+                    with cols[j]:
+                        # Wrap each button in a colored container.
+                        st.markdown(
+                            f"<div class='workout-btn-container' style='background-color: {bg_color};'>",
+                            unsafe_allow_html=True,
+                        )
+                        if st.button(button_label, key=button_key, disabled=disabled, help=day):
+                            save_workout_session({
+                                'exercise': exercise_name,
+                                'sets': workout['Sets'],
+                                'reps': workout['Reps'],
+                                'weight': workout['Weight'],
+                                'description': workout['Description']
+                            })
+                            streamlit_js_eval(js_expressions="parent.window.location.reload()")
+                        st.markdown("</div>", unsafe_allow_html=True)
                 else:
-                    button_label = exercise_name
-                    disabled = False
-                
-                if col.button(button_label, key=button_key, disabled=disabled):
-                    # On button click, mark the workout complete.
-                    save_workout_session({
-                        'exercise': exercise_name,
-                        'sets': workout['Sets'],
-                        'reps': workout['Reps'],
-                        'weight': workout['Weight'],
-                        'description': workout['Description']
-                    })
-                    streamlit_js_eval(js_expressions="parent.window.location.reload()")
+                    cols[j].empty()
     else:
-        # Desktop Layout: Retain the original detailed layout.
+        # Desktop Layout: Retain the original detailed view.
         all_workouts = []
         for day in workout_days:
             workouts = get_workout_template(day)
