@@ -80,7 +80,7 @@ def main():
         # Define icons to represent each day.
         day_icons = {
             "Day 1": "🟣", 
-            "Day 2": "⚪", 
+            "Day 2": "⚫", 
             "Day 3": "🔵",
         }
         
