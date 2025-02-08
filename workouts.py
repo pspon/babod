@@ -79,7 +79,7 @@ def main():
     if layout_mode == "Mobile":
         # Define icons to represent each day.
         day_icons = {
-            "Day 1": "🟢", 
+            "Day 1": "🟣", 
             "Day 2": "⚪", 
             "Day 3": "🔵",
         }
