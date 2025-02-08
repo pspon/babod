@@ -59,7 +59,7 @@ def main():
     
     # Detect the browser window's width.
     width = streamlit_js_eval(js_expressions="window.innerWidth", key="device_width")
-    st.write("Detected window width:", width)
+    #st.write("Detected window width:", width)
     try:
         width_val = int(width)
     except Exception as e:
@@ -71,7 +71,7 @@ def main():
     else:
         layout_mode = "Desktop"
     
-    st.write("Layout mode:", layout_mode)
+    #st.write("Layout mode:", layout_mode)
     
     completed_workouts_today = get_completed_workouts_today()
     workout_days = ["Day 1", "Day 2", "Day 3"]
