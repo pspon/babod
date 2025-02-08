@@ -57,12 +57,27 @@ def save_workout_session(workout):
 def main():
     st.title("Workout Tracker")
     
-    # Use JavaScript to detect if the browser window width is less than or equal to 768px.
-    # (An iPhone SE’s viewport width is about 320px.)
-    is_mobile = streamlit_js_eval(js_expressions="window.innerWidth <= 768", key="device_detection")
-    layout_mode = "Mobile" if is_mobile else "Desktop"
+    # Detect the viewport width using JavaScript.
+    # For an iPhone SE, this should return something like 375.
+    width = streamlit_js_eval(js_expressions="window.innerWidth", key="device_width")
+    st.write("Detected window width:", width)
     
-    # CSS styling adjustments for mobile users
+    # Try to convert the detected width to an integer.
+    try:
+        width_val = int(width)
+    except Exception as e:
+        width_val = None
+    
+    # Determine layout mode based on detected width,
+    # or allow a manual override if detection fails.
+    if width_val is not None:
+        layout_mode = "Mobile" if width_val <= 768 else "Desktop"
+    else:
+        layout_mode = "Mobile" if st.sidebar.checkbox("Force Mobile Layout", value=False) else "Desktop"
+    
+    st.write("Layout mode:", layout_mode)
+    
+    # Inject mobile-specific CSS when in Mobile layout.
     if layout_mode == "Mobile":
         st.markdown(
             """
@@ -77,24 +92,21 @@ def main():
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                 background-color: #f9f9f9;
             }
-            /* Make buttons full width and larger for easy tapping */
+            /* Make buttons full-width and easier to tap */
             button {
                 width: 100% !important;
                 padding: 10px;
                 font-size: 1.1em;
             }
             </style>
-            """, 
-            unsafe_allow_html=True
+            """, unsafe_allow_html=True
         )
     
-    # Get the list of exercises already completed today
     completed_workouts_today = get_completed_workouts_today()
-    # List of days (templates) to load workouts from
     workout_days = ["Day 1", "Day 2", "Day 3"]
     
     if layout_mode == "Mobile":
-        # For mobile, group workouts by day and display them as vertical tiles
+        # Mobile: Display workouts as full-width card tiles, grouped by day.
         for day in workout_days:
             st.subheader(day)
             workouts = get_workout_template(day)
@@ -123,16 +135,16 @@ def main():
                                 'weight': weight,
                                 'description': description
                             })
-                            # Reload to show updated state
+                            # Reload the app to show the updated state.
                             streamlit_js_eval(js_expressions="parent.window.location.reload()")
                     st.markdown("</div>", unsafe_allow_html=True)
     else:
-        # Desktop layout: retain the original column-based layout.
+        # Desktop: Retain original four-column layout.
         all_workouts = []
         for day in workout_days:
             workouts = get_workout_template(day)
             for workout in workouts:
-                workout['Day'] = day  # Add day info to the workout record
+                workout['Day'] = day  # Attach day information.
                 all_workouts.append(workout)
                 
         for workout in all_workouts:
@@ -162,8 +174,8 @@ def main():
                         'description': description
                     })
                     streamlit_js_eval(js_expressions="parent.window.location.reload()")
-        
-        st.text("Today is 2025-02-08")
+    
+    st.text("Today is 2025-02-08")
 
 if __name__ == "__main__":
     main()
