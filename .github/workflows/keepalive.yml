@@ -3,7 +3,7 @@ name: Keep Streamlit App Alive
 on:
   schedule:
     # Run once daily at 00:00 UTC
-    - cron: "0 0 * * *"
+    - cron: "0 0,12 * * *"
 
   workflow_dispatch: # Allows manual triggering of the workflow
 env:
@@ -19,7 +19,7 @@ jobs:
 
     - name: Update date in Streamlit app
       run: |
-        current_date=$(date '+%Y-%m-%d')
+        current_date=$(date '+%Y-%m-%d-%h')
         sed -i "s/st.text(\"Today is .*\")/st.text(\"Today is $current_date\")/" workouts.py
 
     - name: Commit and push changes
