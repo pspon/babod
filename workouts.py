@@ -183,7 +183,7 @@ def main():
                     })
                     streamlit_js_eval(js_expressions="parent.window.location.reload()")
     
-    st.text("Today is 2025-02-19")
+    st.text("Today is 2025-02-19-Feb")
 
 if __name__ == "__main__":
     main()
