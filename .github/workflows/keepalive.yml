@@ -2,8 +2,8 @@ name: Keep Streamlit App Alive
 
 on:
   schedule:
-    # Run once daily at 00:00 UTC
-    - cron: "0 0,12 * * *"
+    # Run every hour starting at 00:00 UTC
+    - cron: "0 * * * *"
 
   workflow_dispatch: # Allows manual triggering of the workflow
 env:
