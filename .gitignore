@@ -126,3 +126,6 @@ uv.lock
 
 # Logs
 *.log
+
+# Secrets
+.streamlit/secrets.toml
