@@ -4,6 +4,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import pytz
+import json
 
 # Authenticate with Google Sheets API.
 def authenticate_google_sheets():
@@ -56,7 +57,7 @@ def save_workout_session(workout):
 # Main Streamlit app.
 def main():
     st.title("Workout Tracker")
-    
+
     # Detect the browser window's width.
     width = streamlit_js_eval(js_expressions="window.innerWidth", key="device_width")
     #st.write("Detected window width:", width)
@@ -65,52 +66,76 @@ def main():
     except Exception as e:
         width_val = None
 
-    # Use mobile layout only if width < 350; otherwise, use desktop layout.
-    if width_val is not None and width_val < 350:
+    # Use mobile layout only if width < 768; otherwise, use desktop layout.
+    if width_val is not None and width_val < 768:
         layout_mode = "Mobile"
     else:
         layout_mode = "Desktop"
-    
+
     #st.write("Layout mode:", layout_mode)
-    
+
     completed_workouts_today = get_completed_workouts_today()
     workout_days = ["Day 1", "Day 2", "Day 3"]
+
+    # Get all workouts to initialize weights
+    all_workouts = []
+    for day in workout_days:
+        workouts = get_workout_template(day)
+        for workout in workouts:
+            workout['Day'] = day
+            all_workouts.append(workout)
+
+    # Initialize session state for weights if not present
+    if 'weights' not in st.session_state:
+        st.session_state.weights = {}
+    for workout in all_workouts:
+        exercise = workout['Exercise Name']
+        if exercise not in st.session_state.weights:
+            try:
+                weight_val = float(workout['Weight'])
+            except ValueError:
+                weight_val = 0.0  # Default for non-numeric weights like 'BW'
+            st.session_state.weights[exercise] = weight_val
     
+    # Weight Adjustment Section
+    with st.expander("Adjust Weights (Progressive Training)", expanded=False):
+        st.write("Adjust the weights for each exercise. These will be saved and used for future sessions.")
+        for exercise in sorted(st.session_state.weights.keys()):
+            st.session_state.weights[exercise] = st.number_input(
+                f"{exercise} (lbs)",
+                min_value=0.0,
+                value=st.session_state.weights[exercise],
+                step=5.0,
+                key=f"weight_{exercise}"
+            )
+
     if layout_mode == "Mobile":
         # Define icons to represent each day.
         day_icons = {
-            "Day 1": "🟣", 
-            "Day 2": "⚫", 
+            "Day 1": "🟣",
+            "Day 2": "⚫",
             "Day 3": "🔵",
         }
-        
-        # Flatten workouts from all days.
-        all_workouts = []
-        for day in workout_days:
-            workouts = get_workout_template(day)
-            for workout in workouts:
-                workout['Day'] = day  # Tag each workout with its day.
-                all_workouts.append(workout)
-                
-        # Force a 3‑column grid in mobile view.
-        num_cols = 3
-        
+
+        # Use 2-column grid in mobile view for better fit.
+        num_cols = 2
+
         # Inject minimal CSS to tightly arrange the buttons.
         st.markdown(
             """
             <style>
-            .workout-btn {
+            .stButton button {
                 width: 100% !important;
-                font-size: 0.75em !important;
-                padding: 4px 2px !important;
-                margin: 1px !important;
-                border-radius: 4px;
+                font-size: 0.8em !important;
+                padding: 6px 4px !important;
+                margin: 2px !important;
+                border-radius: 6px;
             }
             </style>
             """, unsafe_allow_html=True
         )
-        
-        # Render the grid in groups of 3.
+
+        # Render the grid in groups of 2.
         for i in range(0, len(all_workouts), num_cols):
             cols = st.columns(num_cols)
             row_workouts = all_workouts[i:i+num_cols]
@@ -120,11 +145,11 @@ def main():
                     exercise_name = workout['Exercise Name']
                     sets = workout['Sets']
                     reps = workout['Reps']
-                    weight = workout['Weight']
+                    weight = st.session_state.weights[exercise_name]
                     day = workout['Day']
                     icon = day_icons.get(day, "")
                     button_key = f"{day}_{exercise_name}"
-                    
+
                     # Add a check mark if the exercise is already complete.
                     if exercise_name in completed_workouts_today:
                         button_label = f"✅ {exercise_name} {sets}x{reps} ({weight})"
@@ -132,14 +157,14 @@ def main():
                     else:
                         button_label = f"{icon} {exercise_name} {sets}x{reps} ({weight})"
                         disabled = False
-                    
+
                     with cols[j]:
                         if st.button(button_label, key=button_key, disabled=disabled, help=day):
                             save_workout_session({
                                 'exercise': exercise_name,
                                 'sets': workout['Sets'],
                                 'reps': workout['Reps'],
-                                'weight': workout['Weight'],
+                                'weight': st.session_state.weights[exercise_name],
                                 'description': workout['Description']
                             })
                             # Refresh the app to reflect the new state.
@@ -147,38 +172,39 @@ def main():
                 else:
                     cols[j].empty()
     else:
-        # Desktop Layout: Retain the original detailed view.
-        all_workouts = []
-        for day in workout_days:
-            workouts = get_workout_template(day)
-            for workout in workouts:
-                workout['Day'] = day
-                all_workouts.append(workout)
-                
+        # Desktop Layout: Include weight adjustment column.
         for workout in all_workouts:
             exercise_name = workout['Exercise Name']
             sets = workout['Sets']
             reps = workout['Reps']
-            weight = workout['Weight']
+            weight = st.session_state.weights[exercise_name]
             description = workout['Description']
             day = workout['Day']
             button_key = f"{day}_{exercise_name}"
-            
-            col1, col2, col3, col4 = st.columns(4)
+
+            col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 1, 1])
             col1.write(f"**{exercise_name}**")
-            col2.write(f"{sets} sets of {reps} reps ({weight})")
-            col3.write(f"*{description}*")
-            col4.write(f"Day: {day}")
-            
+            col2.write(f"{sets} sets of {reps} reps")
+            new_weight = col3.number_input(
+                "Weight (lbs)",
+                min_value=0.0,
+                value=weight,
+                step=5.0,
+                key=f"desktop_weight_{exercise_name}"
+            )
+            st.session_state.weights[exercise_name] = new_weight
+            col4.write(f"*{description}*")
+            col5.write(f"Day: {day}")
+
             if exercise_name in completed_workouts_today:
-                col4.button("✅ Completed", key=button_key, disabled=True)
+                col5.button("✅ Completed", key=button_key, disabled=True)
             else:
-                if col4.button("Mark as Complete", key=button_key):
+                if col5.button("Mark as Complete", key=button_key):
                     save_workout_session({
                         'exercise': exercise_name,
                         'sets': sets,
                         'reps': reps,
-                        'weight': weight,
+                        'weight': st.session_state.weights[exercise_name],
                         'description': description
                     })
                     streamlit_js_eval(js_expressions="parent.window.location.reload()")
