@@ -42,7 +42,7 @@ def save_workout_session(workout):
     client = authenticate_google_sheets()
     sheet = client.open_by_key(sheet_id)
     session_worksheet = sheet.worksheet('Session Data')
-    
+
     timestamp = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y-%m-%d %H:%M:%S')
     session_worksheet.append_row([
         timestamp,
@@ -53,6 +53,24 @@ def save_workout_session(workout):
         True,
         workout['description']
     ])
+
+# Update weight in the template sheet.
+def update_workout_weight(exercise_name, new_weight):
+    sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'
+    client = authenticate_google_sheets()
+    sheet = client.open_by_key(sheet_id)
+
+    # Check each day for the exercise
+    workout_days = ["Day 1", "Day 2", "Day 3"]
+    for day in workout_days:
+        worksheet = sheet.worksheet(day)
+        records = worksheet.get_all_records()
+        for i, record in enumerate(records):
+            if record.get('Exercise Name') == exercise_name:
+                # Update the weight (assuming column is 'Weight')
+                row_num = i + 2  # +1 for 0-index, +1 for header
+                worksheet.update_cell(row_num, 4, str(new_weight))  # Column D is Weight
+                break
 
 # Main Streamlit app.
 def main():
@@ -88,6 +106,8 @@ def main():
     # Initialize session state for weights if not present
     if 'weights' not in st.session_state:
         st.session_state.weights = {}
+    if 'old_weights' not in st.session_state:
+        st.session_state.old_weights = {}
     for workout in all_workouts:
         exercise = workout['Exercise Name']
         if exercise not in st.session_state.weights:
@@ -96,7 +116,8 @@ def main():
             except ValueError:
                 weight_val = 0.0  # Default for non-numeric weights like 'BW'
             st.session_state.weights[exercise] = weight_val
-    
+            st.session_state.old_weights[exercise] = weight_val
+
     # Weight Adjustment Section
     with st.expander("Adjust Weights (Progressive Training)", expanded=False):
         st.write("Adjust the weights for each exercise. These will be saved and used for future sessions.")
@@ -108,6 +129,12 @@ def main():
                 step=5.0,
                 key=f"weight_{exercise}"
             )
+
+    # Update Google Sheets if weights changed
+    for exercise in st.session_state.weights:
+        if st.session_state.weights[exercise] != st.session_state.old_weights.get(exercise, st.session_state.weights[exercise]):
+            update_workout_weight(exercise, st.session_state.weights[exercise])
+            st.session_state.old_weights[exercise] = st.session_state.weights[exercise]
 
     if layout_mode == "Mobile":
         # Define icons to represent each day.
