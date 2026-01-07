@@ -16,6 +16,7 @@ def authenticate_google_sheets():
     return client
 
 # Get workout data from the specified template (day).
+@st.cache_data(ttl=300)  # Cache for 5 minutes
 def get_workout_template(template_name):
     sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'
     client = authenticate_google_sheets()
@@ -39,6 +40,8 @@ def update_workout_weight(exercise_name, new_weight):
                 # Update the weight (assuming column is 'Weight')
                 row_num = i + 2  # +1 for 0-index, +1 for header
                 worksheet.update_cell(row_num, 4, str(new_weight))  # Column D is Weight
+                # Clear cache so fresh data is loaded
+                get_workout_template.clear()
                 break
 
 def main():

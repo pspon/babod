@@ -18,6 +18,7 @@ def authenticate_google_sheets():
     return client
 
 # Get workout data from the specified template (day).
+@st.cache_data(ttl=300)  # Cache for 5 minutes
 def get_workout_template(template_name):
     sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'
     client = authenticate_google_sheets()
@@ -26,12 +27,13 @@ def get_workout_template(template_name):
     return worksheet.get_all_records()
 
 # Fetch today’s completed workouts.
+@st.cache_data(ttl=60)  # Cache for 1 minute since this changes frequently
 def get_completed_workouts_today():
     sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'
     client = authenticate_google_sheets()
     sheet = client.open_by_key(sheet_id)
     session_worksheet = sheet.worksheet('Session Data')
-    
+
     today = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y-%m-%d')
     records = session_worksheet.get_all_records()
     return {record['exercise'] for record in records if record['timestamp'].startswith(today)}
