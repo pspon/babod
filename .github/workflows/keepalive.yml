@@ -20,13 +20,13 @@ jobs:
     - name: Update date in Streamlit app
       run: |
         current_date=$(date '+%Y-%m-%d-%H')
-        sed -i "s/st.text(\"Today is .*\")/st.text(\"Today is $current_date\")/" workouts.py
+        sed -i "s/st.text(\"Today is .*\")/st.text(\"Today is $current_date\")/" app.py
 
     - name: Commit and push changes
       run: |
         git config --local user.name "github-actions"
         git config --local user.email "github-actions@github.com"
-        git add workouts.py
+        git add app.py
         git commit -m "Update date in Streamlit app to $current_date"
         git push
       env:
