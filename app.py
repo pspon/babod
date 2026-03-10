@@ -27,7 +27,7 @@ def get_workout_template(template_name):
     return worksheet.get_all_records()
 
 # Fetch today’s completed workouts.
-@st.cache_data(ttl=60)  # Cache for 1 minute since this changes frequently
+@st.cache_data(ttl=10)  # Cache for 10s since this changes frequently
 def get_completed_workouts_today():
     sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'
     client = authenticate_google_sheets()
