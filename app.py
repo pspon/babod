@@ -27,7 +27,7 @@ def get_workout_template(template_name):
     return worksheet.get_all_records()
 
 # Fetch today’s completed workouts.
-@st.cache_data(ttl=10)  # Cache for 10s since this changes frequently
+#@st.cache_data(ttl=10)  # Cache for 10s since this changes frequently
 def get_completed_workouts_today():
     sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'
     client = authenticate_google_sheets()
@@ -79,7 +79,8 @@ def main():
     #st.write("Layout mode:", layout_mode)
 
     completed_workouts_today = get_completed_workouts_today()
-    workout_days = ["Day 1", "Day 2", "Day 3"]
+    #workout_days = ["Day 1", "Day 2", "Day 3"]
+    workout_days = ["Day 3"]
 
     # Get all workouts to initialize weights
     all_workouts = []
