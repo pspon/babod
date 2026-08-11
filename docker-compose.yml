@@ -1,0 +1,22 @@
+services:
+  babod:
+    build: .
+    image: babod:latest
+    container_name: babod
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      # Everything the app stores lives in this file, inside the mounted volume.
+      BABOD_DB_PATH: /data/babod.db
+      BABOD_TIMEZONE: ${BABOD_TIMEZONE:-US/Eastern}
+    volumes:
+      # Host path -> container path. This is the Raspberry Pi's own disk, so
+      # the workout data stays on the Pi and survives rebuilds.
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3

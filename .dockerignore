@@ -1,0 +1,14 @@
+.git
+.github
+.devcontainer
+data
+backups
+**/__pycache__
+*.pyc
+.streamlit/secrets.toml
+.venv
+venv
+*.db
+*.db-wal
+*.db-shm
+readme.md

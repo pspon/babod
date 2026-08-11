@@ -1,0 +1,19 @@
+[
+  {"day": "Day 1", "name": "Bench Press", "sets": "4", "reps": "8", "weight": 95, "description": "Chest — control the descent"},
+  {"day": "Day 1", "name": "Overhead Press", "sets": "3", "reps": "10", "weight": 55, "description": "Shoulders"},
+  {"day": "Day 1", "name": "Incline Dumbbell Press", "sets": "3", "reps": "10", "weight": 35, "description": "Upper chest, per hand"},
+  {"day": "Day 1", "name": "Triceps Pushdown", "sets": "3", "reps": "12", "weight": 40, "description": "Elbows tucked"},
+  {"day": "Day 1", "name": "Push Ups", "sets": "3", "reps": "15", "weight": 0, "description": "Bodyweight finisher"},
+
+  {"day": "Day 2", "name": "Deadlift", "sets": "4", "reps": "5", "weight": 155, "description": "Flat back, brace first"},
+  {"day": "Day 2", "name": "Barbell Row", "sets": "3", "reps": "10", "weight": 85, "description": "Back"},
+  {"day": "Day 2", "name": "Lat Pulldown", "sets": "3", "reps": "12", "weight": 90, "description": "Pull to the collarbone"},
+  {"day": "Day 2", "name": "Face Pull", "sets": "3", "reps": "15", "weight": 30, "description": "Rear delts"},
+  {"day": "Day 2", "name": "Pull Ups", "sets": "3", "reps": "8", "weight": 0, "description": "Bodyweight"},
+
+  {"day": "Day 3", "name": "Back Squat", "sets": "4", "reps": "8", "weight": 135, "description": "Legs — depth over load"},
+  {"day": "Day 3", "name": "Romanian Deadlift", "sets": "3", "reps": "10", "weight": 95, "description": "Hamstrings"},
+  {"day": "Day 3", "name": "Walking Lunge", "sets": "3", "reps": "12", "weight": 25, "description": "Per hand, per leg"},
+  {"day": "Day 3", "name": "Calf Raise", "sets": "3", "reps": "15", "weight": 45, "description": "Pause at the top"},
+  {"day": "Day 3", "name": "Plank", "sets": "3", "reps": "45s", "weight": 0, "description": "Core, bodyweight"}
+]

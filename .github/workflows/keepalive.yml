@@ -20,6 +20,7 @@ jobs:
     - name: Update date in Streamlit app
       run: |
         current_date=$(date '+%Y-%m-%d-%H')
+        echo "current_date=$current_date" >> "$GITHUB_ENV"
         sed -i "s/st.text(\"Today is .*\")/st.text(\"Today is $current_date\")/" app.py
 
     - name: Commit and push changes
@@ -27,8 +28,12 @@ jobs:
         git config --local user.name "github-actions"
         git config --local user.email "github-actions@github.com"
         git add app.py
-        git commit -m "Update date in Streamlit app to $current_date"
-        git push
+        if git diff --cached --quiet; then
+          echo "Date already up to date, nothing to commit."
+        else
+          git commit -m "Update date in Streamlit app to $current_date"
+          git push
+        fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

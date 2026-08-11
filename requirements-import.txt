@@ -1,0 +1,4 @@
+# Only needed to run scripts/import_from_sheets.py once, to migrate the old
+# Google Sheet into the local database. The app itself does not use these.
+gspread
+oauth2client

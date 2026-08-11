@@ -119,7 +119,8 @@ dmypy.json
 Thumbs.db
 
 # Streamlit
-.streamlit/
+.streamlit/*
+!.streamlit/config.toml
 
 # uv
 uv.lock
@@ -129,3 +130,10 @@ uv.lock
 
 # Secrets
 .streamlit/secrets.toml
+
+# Local data (the SQLite database lives on the host, never in git)
+data/
+backups/
+*.db
+*.db-wal
+*.db-shm

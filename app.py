@@ -1,199 +1,146 @@
+"""Workout tracker — mobile-first Streamlit UI backed by local SQLite."""
+
+import os
+
 import streamlit as st
-from streamlit_js_eval import streamlit_js_eval
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
-import pytz
-import json
 
-# Authenticate with Google Sheets API.
-def authenticate_google_sheets():
-    scopes = [
-        "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive",
-    ]
-    credential_json_string = st.secrets["barabod"]
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(credential_json_string, scopes=scopes)
-    client = gspread.authorize(creds)
-    return client
-
-# Get workout data from the specified template (day).
-@st.cache_data(ttl=300)  # Cache for 5 minutes
-def get_workout_template(template_name):
-    sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'
-    client = authenticate_google_sheets()
-    sheet = client.open_by_key(sheet_id)
-    worksheet = sheet.worksheet(template_name)
-    return worksheet.get_all_records()
-
-# Fetch today’s completed workouts.
-#@st.cache_data(ttl=10)  # Cache for 10s since this changes frequently
-def get_completed_workouts_today():
-    sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'
-    client = authenticate_google_sheets()
-    sheet = client.open_by_key(sheet_id)
-    session_worksheet = sheet.worksheet('Session Data')
-
-    today = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y-%m-%d')
-    records = session_worksheet.get_all_records()
-    return {record['exercise'] for record in records if record['timestamp'].startswith(today)}
-
-# Save a completed workout.
-def save_workout_session(workout):
-    sheet_id = '1xkPGxluU_EYHz0eWPXnzq-VZMVedl-hgqzeEVp6eLTU'
-    client = authenticate_google_sheets()
-    sheet = client.open_by_key(sheet_id)
-    session_worksheet = sheet.worksheet('Session Data')
-
-    timestamp = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y-%m-%d %H:%M:%S')
-    session_worksheet.append_row([
-        timestamp,
-        workout['exercise'],
-        workout['sets'],
-        workout['reps'],
-        workout['weight'],
-        True,
-        workout['description']
-    ])
+import storage
+from ui import format_weight, pick_one, rerun, setup_page
 
 
+@st.cache_resource
+def _database():
+    """Create/seed the database once per server process."""
+    storage.init_db()
+    return storage.db_path()
 
-# Main Streamlit app.
+
+def suggested_day(days):
+    """Pick the day to open on: the one in progress, else the next in rotation."""
+    if not days:
+        return None
+
+    today = storage.today_str()
+    for session in storage.recent_sessions(days=14, limit=200):
+        if session["timestamp"].startswith(today) and session["day"] in days:
+            return session["day"]
+
+    for session in storage.recent_sessions(days=14, limit=200):
+        if session["day"] in days:
+            return days[(days.index(session["day"]) + 1) % len(days)]
+
+    return days[0]
+
+
+def on_weight_change(exercise, widget_key):
+    storage.set_exercise_weight(exercise, st.session_state[widget_key])
+    st.toast(f"{exercise} → {format_weight(st.session_state[widget_key])}", icon="🏋️")
+
+
+def exercise_card(workout, completed_at):
+    """One tappable exercise. Returns True if the plan changed and we should rerun."""
+    name = workout["name"]
+    weight_key = f"weight_{workout['id']}"
+
+    with st.container(border=True):
+        header, weight = st.columns([3, 2])
+        with header:
+            st.markdown(f"**{name}**")
+            st.caption(f"{workout['sets']} × {workout['reps']}")
+        with weight:
+            st.markdown(
+                f"<div style='text-align:right;font-size:1.35rem;font-weight:700'>"
+                f"{format_weight(workout['weight'])}</div>",
+                unsafe_allow_html=True,
+            )
+
+        if workout["description"]:
+            st.caption(workout["description"])
+
+        if completed_at:
+            # Compact row once it's logged, so the unfinished work stays in view.
+            status, undo = st.columns([3, 2])
+            status.markdown(f"✅ **Done** at {completed_at}")
+            if undo.button("Undo", key=f"undo_{workout['id']}"):
+                storage.unlog_workout(name)
+                return True
+        else:
+            if st.button("Mark complete", key=f"log_{workout['id']}", type="primary"):
+                storage.log_workout(
+                    exercise=name,
+                    sets=workout["sets"],
+                    reps=workout["reps"],
+                    weight=workout["weight"],
+                    description=workout["description"],
+                    day=workout["day"],
+                )
+                return True
+
+            with st.expander("Adjust weight"):
+                st.number_input(
+                    "Weight (lbs)",
+                    min_value=0.0,
+                    step=5.0,
+                    value=float(workout["weight"]),
+                    key=weight_key,
+                    on_change=on_weight_change,
+                    args=(name, weight_key),
+                    help="Saved right away, for every day this exercise appears.",
+                )
+
+    return False
+
+
 def main():
-    st.title("Workout Tracker")
+    setup_page("Workout Tracker", storage.now_local().strftime("%A, %B %-d"))
+    _database()
 
-    # Detect the browser window's width.
-    width = streamlit_js_eval(js_expressions="window.innerWidth", key="device_width")
-    #st.write("Detected window width:", width)
-    try:
-        width_val = int(width)
-    except Exception as e:
-        width_val = None
-
-    # Use mobile layout only if width < 768; otherwise, use desktop layout.
-    if width_val is not None and width_val < 768:
-        layout_mode = "Mobile"
-    else:
-        layout_mode = "Desktop"
-
-    #st.write("Layout mode:", layout_mode)
-
-    completed_workouts_today = get_completed_workouts_today()
-    #workout_days = ["Day 1", "Day 2", "Day 3"]
-    workout_days = ["Day 3"]
-
-    # Get all workouts to initialize weights
-    all_workouts = []
-    for day in workout_days:
-        workouts = get_workout_template(day)
-        for workout in workouts:
-            workout['Day'] = day
-            all_workouts.append(workout)
-
-    # Get current weights from templates
-    exercise_weights = {}
-    for workout in all_workouts:
-        exercise = workout['Exercise Name']
-        if exercise not in exercise_weights:
-            try:
-                weight_val = float(workout['Weight'])
-            except ValueError:
-                weight_val = 0.0  # Default for non-numeric weights like 'BW'
-            exercise_weights[exercise] = weight_val
-
-    if layout_mode == "Mobile":
-        # Define icons to represent each day.
-        day_icons = {
-            "Day 1": "🟣",
-            "Day 2": "⚫",
-            "Day 3": "🔵",
-        }
-
-        # Use 2-column grid in mobile view for better fit.
-        num_cols = 2
-
-        # Inject minimal CSS to tightly arrange the buttons.
-        st.markdown(
-            """
-            <style>
-            .stButton button {
-                width: 100% !important;
-                font-size: 0.8em !important;
-                padding: 6px 4px !important;
-                margin: 2px !important;
-                border-radius: 6px;
-            }
-            </style>
-            """, unsafe_allow_html=True
+    days = storage.list_days()
+    if not days:
+        st.info(
+            "No workout plan yet. Add exercises on the **Plan & Weights** page, "
+            "or import an existing Google Sheet with "
+            "`python scripts/import_from_sheets.py`."
         )
+        return
 
-        # Render the grid in groups of 2.
-        for i in range(0, len(all_workouts), num_cols):
-            cols = st.columns(num_cols)
-            row_workouts = all_workouts[i:i+num_cols]
-            for j in range(num_cols):
-                if j < len(row_workouts):
-                    workout = row_workouts[j]
-                    exercise_name = workout['Exercise Name']
-                    sets = workout['Sets']
-                    reps = workout['Reps']
-                    weight = exercise_weights[exercise_name]
-                    day = workout['Day']
-                    icon = day_icons.get(day, "")
-                    button_key = f"{day}_{exercise_name}"
+    if "selected_day" not in st.session_state:
+        st.session_state.selected_day = suggested_day(days)
 
-                    # Add a check mark if the exercise is already complete.
-                    if exercise_name in completed_workouts_today:
-                        button_label = f"✅ {exercise_name} {sets}x{reps} ({weight})"
-                        disabled = True
-                    else:
-                        button_label = f"{icon} {exercise_name} {sets}x{reps} ({weight})"
-                        disabled = False
+    selected = pick_one(
+        "Workout day", days, key="day_picker", default=st.session_state.selected_day
+    )
+    st.session_state.selected_day = selected
 
-                    with cols[j]:
-                        if st.button(button_label, key=button_key, disabled=disabled, help=day):
-                            save_workout_session({
-                                'exercise': exercise_name,
-                                'sets': workout['Sets'],
-                                'reps': workout['Reps'],
-                                'weight': exercise_weights[exercise_name],
-                                'description': workout['Description']
-                            })
-                            # Refresh the app to reflect the new state.
-                            streamlit_js_eval(js_expressions="parent.window.location.reload()")
-                else:
-                    cols[j].empty()
-    else:
-        # Desktop Layout: Simple workout tracker
-        for workout in all_workouts:
-            exercise_name = workout['Exercise Name']
-            sets = workout['Sets']
-            reps = workout['Reps']
-            weight = exercise_weights[exercise_name]
-            description = workout['Description']
-            day = workout['Day']
-            button_key = f"{day}_{exercise_name}"
+    workouts = storage.get_workouts(selected)
+    completed = storage.completed_on()
 
-            col1, col2, col3, col4 = st.columns(4)
-            col1.write(f"**{exercise_name}**")
-            col2.write(f"{sets} sets of {reps} reps ({weight} lbs)")
-            col3.write(f"*{description}*")
-            col4.write(f"Day: {day}")
+    done = sum(1 for workout in workouts if workout["name"] in completed)
+    if workouts:
+        st.progress(done / len(workouts), text=f"{done} of {len(workouts)} done today")
 
-            if exercise_name in completed_workouts_today:
-                col4.button("✅ Completed", key=button_key, disabled=True)
-            else:
-                if col4.button("Mark as Complete", key=button_key):
-                    save_workout_session({
-                        'exercise': exercise_name,
-                        'sets': sets,
-                        'reps': reps,
-                        'weight': weight,
-                        'description': description
-                    })
-                    streamlit_js_eval(js_expressions="parent.window.location.reload()")
+    for workout in workouts:
+        if exercise_card(workout, completed.get(workout["name"])):
+            rerun()
 
-    st.text("Today is 2026-08-11-15")
+    if workouts and done == len(workouts):
+        st.success(f"{selected} complete. Nice work.")
+
+    st.markdown("---")
+    streak = storage.streak_days()
+    left, right = st.columns(2)
+    left.metric("Logged today", len(completed))
+    right.metric("Day streak", streak)
+
+    if hasattr(st, "page_link"):
+        st.page_link("pages/1_Plan_and_Weights.py", label="Plan & weights", icon="⚙️")
+        st.page_link("pages/2_History.py", label="History", icon="📈")
+
+    # Keep-alive marker rewritten hourly by .github/workflows/keepalive.yml for
+    # the Streamlit Cloud deployment; hidden unless BABOD_SHOW_KEEPALIVE=1.
+    if os.getenv("BABOD_SHOW_KEEPALIVE") == "1":
+        st.text("Today is 2026-08-11-15")
+
 
 if __name__ == "__main__":
     main()
