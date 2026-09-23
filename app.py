@@ -80,7 +80,7 @@ def main():
 
     completed_workouts_today = get_completed_workouts_today()
     #workout_days = ["Day 1", "Day 2", "Day 3"]
-    workout_days = ["Day 3"]
+    workout_days = ["Day 2", "Day 3"]
 
     # Get all workouts to initialize weights
     all_workouts = []
